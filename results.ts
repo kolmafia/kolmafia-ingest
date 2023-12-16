@@ -406,6 +406,24 @@ async function processShop(shop: Results["shop"]) {
   await writeFile(path, lines.join("\n"));
 }
 
+const modifierSortTransformer = (v: string) => {
+  const actual = v.split("\n").at(-1)!;
+  const piece = actual.startsWith("# ")
+    ? actual.slice(2, actual.indexOf(":"))
+    : actual.split("\t").slice(1).join("\t");
+  const [, name] = piece.match(/^(?:\[\d+])(.*?)$/) ?? [piece, piece];
+  return name;
+};
+
+function modifierSort(a: string, b: string) {
+  const transformedA = modifierSortTransformer(a);
+  const transformedB = modifierSortTransformer(b);
+  return transformedA.localeCompare(transformedB, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 async function processModifiers(modifiers: Results["modifiers"]) {
   const path = "kolmafia/src/data/modifiers.txt";
 
@@ -415,9 +433,7 @@ async function processModifiers(modifiers: Results["modifiers"]) {
     .reduce(
       (acc, { section, line }) => ({
         ...acc,
-        [section]: [...(acc[section] || []), line.join("\n")].toSorted(
-          naturalSort,
-        ),
+        [section]: [...(acc[section] || []), line.join("\n")],
       }),
       {} as Record<string, string[]>,
     );
@@ -441,17 +457,8 @@ async function processModifiers(modifiers: Results["modifiers"]) {
 
     const sectionLines = coalesceComments(
       lines.slice(sectionStart, sectionEnd),
-      (c) => c.startsWith("# ***"),
+      (c) => c.startsWith("# *"),
     );
-
-    const compareTransformer = (v: string) => {
-      const actual = v.split("\n").at(-1)!;
-      const piece = actual.startsWith("# ")
-        ? actual.slice(2)
-        : actual.split("\t").slice(1).join("\t");
-      const [, name] = piece.match(/^(?:\[\d+])(.*?)$/) ?? [piece, piece];
-      return name;
-    };
 
     const nonDupeLines = newLines.filter(
       (v) => !sectionLines.includes(v.split("\n").at(0)!),
@@ -462,12 +469,7 @@ async function processModifiers(modifiers: Results["modifiers"]) {
     lines.splice(
       sectionStart,
       sectionEnd - sectionStart,
-      ...[...sectionLines, ...nonDupeLines].toSorted((a, b) =>
-        compareTransformer(a).localeCompare(compareTransformer(b), undefined, {
-          numeric: true,
-          sensitivity: "base",
-        }),
-      ),
+      ...[...sectionLines, ...nonDupeLines].toSorted(modifierSort),
     );
   }
 
