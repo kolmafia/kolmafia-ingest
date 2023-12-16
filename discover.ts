@@ -27,12 +27,17 @@ function getSection(types: string[]) {
   return types.find((t) => SECTIONS.includes(t)) ?? "misc";
 }
 
+const ITEM_CACHE: string[] = [];
+
 function discoverItem(results: Results, discovery: string[]) {
+  const item = discovery[0].split("\t");
+
+  if (ITEM_CACHE.includes(item[0])) return;
+  ITEM_CACHE.push(item[0]);
+
   results.items.push(discovery[0]);
 
   if (discovery.length === 1) return;
-
-  const item = discovery[0].split("\t");
 
   const types = item[4].split(", ");
 
@@ -91,7 +96,7 @@ function discoverOutfit(results: Results, discovery: string[]) {
 }
 
 function discoverShop(results: Results, discovery: string[]) {
-  const row = discovery[0].split("\t");
+  results.shop.push(...discovery);
 }
 
 export function discoverMonster(
@@ -112,7 +117,9 @@ export function discoverFamiliar(
 ) {
   const equip = "";
   const types = "";
-  results.familiars.push(`${id}\t${name}\t${image}\t${types}\t${hatchling}\t${equip}\t0\t0\t0\t0`);
+  results.familiars.push(
+    `${id}\t${name}\t${image}\t${types}\t${hatchling}\t${equip}\t0\t0\t0\t0`,
+  );
 }
 
 const DISCOVERY_CACHE: string[] = [];

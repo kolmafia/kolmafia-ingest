@@ -1,6 +1,8 @@
 import fs, { readFile, writeFile } from "node:fs/promises";
 import simpleGit, { ResetMode } from "simple-git";
 
+const BRANCH = "main";
+
 export type Results = {
   items: string[];
   skills: string[];
@@ -12,6 +14,7 @@ export type Results = {
   outfits: string[];
   monsters: string[];
   familiars: string[];
+  shop: string[];
 };
 
 export const newResults = () => ({
@@ -25,7 +28,10 @@ export const newResults = () => ({
   outfits: [],
   monsters: [],
   familiars: [],
+  shop: [],
 });
+
+// Utils
 
 const naturalSortTransformer = (v: string) => {
   const piece = v.split("\n").at(-1) ?? "";
@@ -49,13 +55,31 @@ async function exists(path: string) {
   }
 }
 
-const BRANCH = "main"
+function normaliseSection(section: string) {
+  switch (section) {
+    case "offhand":
+      return "off-hand items";
+    case "accessory":
+      return "accessories";
+    case "food":
+    case "pants":
+      return section;
+    case "drink":
+      return "booze";
+    case "skill":
+      return "passive skills";
+    case "misc":
+      return "everything else";
+    default:
+      return `${section}s`;
+  }
+}
 
 async function prepRepo() {
   if (await exists("kolmafia")) {
     const repo = simpleGit("kolmafia");
     await repo.reset(ResetMode.HARD);
-    await repo.checkoutBranch(BRANCH, "origin");
+    await repo.checkout(BRANCH);
     await repo.pull();
     return repo;
   }
@@ -68,19 +92,43 @@ async function prepRepo() {
   return simpleGit("kolmafia");
 }
 
+function coalesceComments(
+  lines: string[],
+  coaleseIf = (line: string) => line.startsWith("#"),
+) {
+  let i = 0;
+
+  let handlingComment = false;
+  while (i < lines.length) {
+    let newLine = lines[i];
+    if (handlingComment) {
+      const [prev] = lines.splice(--i, 1);
+      newLine = `${prev}\n${newLine}`;
+    }
+    handlingComment = coaleseIf(lines[i]);
+    lines[i] = newLine;
+    i++;
+  }
+
+  return lines;
+}
+
+// Processers
+
 export async function processResults(results: Results) {
   const repo = await prepRepo();
 
-  await processItems(results.items);
-  await processSkills(results.skills);
   await processEquipment(results.equipment);
+  await processItems(results.items);
+  await processModifiers(results.modifiers);
+  await processMonsters(results.monsters);
+  await processShop(results.shop);
+  await processSimpleAlphabetical("familiars.txt", results.familiars, true);
   await processSimpleAlphabetical("fullness.txt", results.fullness);
   await processSimpleAlphabetical("inebriety.txt", results.inebriety);
   await processSimpleAlphabetical("outfits.txt", results.outfits, true);
   await processSimpleAlphabetical("statuseffects.txt", results.effects, true);
-  await processSimpleAlphabetical("familiars.txt", results.familiars, true);
-  await processMonsters(results.monsters);
-  await processModifiers(results.modifiers);
+  await processSkills(results.skills);
 
   const diff = await repo.diff();
   console.log(diff);
@@ -145,7 +193,6 @@ async function processSkills(skills: Results["skills"]) {
       continue;
     }
 
-
     if (lines[i]?.startsWith("#") || lines[i]?.length === 0) {
       i++;
       continue;
@@ -182,26 +229,6 @@ async function processSkills(skills: Results["skills"]) {
   await writeFile(path, lines.join("\n"));
 }
 
-function normaliseSection(section: string) {
-  switch (section) {
-    case "offhand":
-      return "off-hand items";
-    case "accessory":
-      return "accessories";
-    case "food":
-    case "pants":
-      return section;
-    case "drink":
-      return "booze";
-    case "skill":
-      return "passive skills";
-    case "misc":
-      return "everything else";
-    default:
-      return `${section}s`;
-  }
-}
-
 async function processEquipment(equipment: Results["equipment"]) {
   const path = "kolmafia/src/data/equipment.txt";
 
@@ -233,9 +260,10 @@ async function processEquipment(equipment: Results["equipment"]) {
     lines.splice(
       sectionStart,
       sectionEnd - sectionStart,
-      ...[...lines.slice(sectionStart, sectionEnd), ...newLines.filter(v => !lines.includes(v))].toSorted(
-        naturalSort,
-      ),
+      ...[
+        ...lines.slice(sectionStart, sectionEnd),
+        ...newLines.filter((v) => !lines.includes(v)),
+      ].toSorted(naturalSort),
     );
   }
 
@@ -244,27 +272,6 @@ async function processEquipment(equipment: Results["equipment"]) {
   }
 
   await writeFile(path, lines.join("\n"));
-}
-
-function coalesceComments(
-  lines: string[],
-  coaleseIf = (line: string) => line.startsWith("#"),
-) {
-  let i = 0;
-
-  let handlingComment = false;
-  while (i < lines.length) {
-    let newLine = lines[i];
-    if (handlingComment) {
-      const [prev] = lines.splice(--i, 1);
-      newLine = `${prev}\n${newLine}`;
-    }
-    handlingComment = coaleseIf(lines[i]);
-    lines[i] = newLine;
-    i++;
-  }
-
-  return lines;
 }
 
 async function processSimpleAlphabetical(
@@ -284,11 +291,18 @@ async function processSimpleAlphabetical(
   let i = start;
 
   const sectionLines = coalesceComments(lines.slice(start, lines.length));
+  const dedupedLines = values.filter((v) => !sectionLines.includes(v));
 
   lines.splice(
     start,
     lines.length - start,
-    ...[...sectionLines, ...values.filter(v => !sectionLines.includes(v))].toSorted(naturalSort),
+    ...[
+      ...sectionLines.filter(
+        (v) =>
+          !v.match(/\d+/) || !dedupedLines.find((l) => l.startsWith(`${v}\t`)),
+      ),
+      ...dedupedLines,
+    ].toSorted(naturalSort),
   );
 
   if (lines[lines.length - 1] !== "") {
@@ -308,15 +322,19 @@ async function processSimpleAlphabetical(
       }
       const id = Number(lines[i].split("\t")[0]);
       const fill = id - (lastId + 1);
-      lines.splice(
-        i,
-        0,
-        ...Array(fill)
-          .fill(0)
-          .map((v, i) => (i + lastId + 1).toString()),
-      );
-      lastId = id;
-      i += fill + 1;
+      if (fill > -1) {
+        lines.splice(
+          i,
+          0,
+          ...Array(fill)
+            .fill(0)
+            .map((v, i) => (i + lastId + 1).toString()),
+        );
+        lastId = id;
+        i += fill + 1;
+      } else {
+        i++;
+      }
     }
     finished = lines.join("\n");
   }
@@ -336,16 +354,73 @@ async function processMonsters(monsters: Results["monsters"]) {
   );
 }
 
+async function processShop(shop: Results["shop"]) {
+  const path = `kolmafia/src/data/npcstores.txt`;
+
+  const file = await readFile(path, "utf-8");
+  const lines = file.trim().split("\n");
+
+  const grouped = shop.reduce(
+    (acc, line) => {
+      const name = line.split("\t")[0];
+      return {
+        ...acc,
+        [name]: [...(acc[name] || []), line],
+      };
+    },
+    {} as Record<string, string[]>,
+  );
+
+  for (const [shop, newLines] of Object.entries(grouped)) {
+    const start = lines.findIndex((l) => l.startsWith(shop));
+    const shopStart = start < 0 ? lines.length : start;
+    const end = lines.indexOf("", start);
+    const shopEnd = end < 0 ? lines.length : end;
+
+    const shopLines = lines.slice(shopStart, shopEnd);
+    const dedupedLines = newLines.filter((l) => !shopLines.includes(l));
+
+    // Add preceding newline for new shops
+    if (start < 0) dedupedLines.push("");
+
+    lines.splice(
+      shopStart,
+      shopEnd - shopStart,
+      ...[...shopLines, ...dedupedLines].toSorted((a, b) =>
+        a
+          .split("\t")
+          .at(-1)!
+          .slice(3)
+          .localeCompare(b.split("\t").at(-1)!.slice(3), undefined, {
+            sensitivity: "base",
+            numeric: true,
+          }),
+      ),
+    );
+  }
+
+  if (lines[lines.length - 1] !== "") {
+    lines.push("");
+  }
+
+  await writeFile(path, lines.join("\n"));
+}
+
 async function processModifiers(modifiers: Results["modifiers"]) {
   const path = "kolmafia/src/data/modifiers.txt";
 
-  const grouped = modifiers.reduce(
-    (acc, { section, line }) => ({
-      ...acc,
-      [section]: [...(acc[section] || []), line.join("\n")].toSorted(naturalSort),
-    }),
-    {} as Record<string, string[]>,
-  );
+  const grouped = modifiers
+    // All non-comment lines make it through, if they're commented they must include a colon
+    .filter(({ line }) => !line[0].startsWith("#") || line[0].includes(":"))
+    .reduce(
+      (acc, { section, line }) => ({
+        ...acc,
+        [section]: [...(acc[section] || []), line.join("\n")].toSorted(
+          naturalSort,
+        ),
+      }),
+      {} as Record<string, string[]>,
+    );
 
   const file = await readFile(path, "utf-8");
   const lines = file.trim().split("\n");
@@ -374,12 +449,14 @@ async function processModifiers(modifiers: Results["modifiers"]) {
       const piece = actual.startsWith("# ")
         ? actual.slice(2)
         : actual.split("\t").slice(1).join("\t");
-      const [,name] = piece.match(/^(?:\[\d+])(.*?)$/) ?? [piece, piece];
+      const [, name] = piece.match(/^(?:\[\d+])(.*?)$/) ?? [piece, piece];
       return name;
     };
 
-    const nonDupeLines = newLines.filter(v => !sectionLines.includes(v.split("\n").at(0)!));
-    
+    const nonDupeLines = newLines.filter(
+      (v) => !sectionLines.includes(v.split("\n").at(0)!),
+    );
+
     if (nonDupeLines.length === 0) continue;
 
     lines.splice(
