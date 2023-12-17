@@ -1,9 +1,11 @@
 import fs from "fs/promises";
+import { command, option, positional, run } from "cmd-ts";
+import { File } from 'cmd-ts/batteries/fs';
 
 import { discover, discoverFamiliar, discoverMonster } from "./discover";
 import { newResults, processResults } from "./results";
 
-async function main(file: string) {
+async function main(file: string, branch: string) {
   const session = await fs.readFile(file, "utf-8");
 
   const results = newResults();
@@ -28,7 +30,26 @@ async function main(file: string) {
     );
   }
 
-  await processResults(results);
+  await processResults(results, branch);
 }
 
-main("../../KoLmafia/sessions/gausie_20231215.txt");
+
+const app = command({
+  name: 'kolmafia-ingress',
+  args: {
+    file: positional({
+      type: File,
+    }),
+    branch: option({
+      long: "branch",
+      short: "b",
+      description: "Branch to diff against (defaults to main)",
+      defaultValue: () => "main",
+    }),
+  },
+  handler: ({ file, branch }) => {
+    main(file, branch);
+  },
+});
+
+run(app, process.argv.slice(2));

@@ -1,8 +1,6 @@
 import fs, { readFile, writeFile } from "node:fs/promises";
 import simpleGit, { ResetMode } from "simple-git";
 
-const BRANCH = "main";
-
 export type Results = {
   items: string[];
   skills: string[];
@@ -75,17 +73,17 @@ function normaliseSection(section: string) {
   }
 }
 
-async function prepRepo() {
+async function prepRepo(branch: string) {
   if (await exists("kolmafia")) {
     const repo = simpleGit("kolmafia");
     await repo.reset(ResetMode.HARD);
-    await repo.checkout(BRANCH);
+    await repo.checkout(branch);
     await repo.pull();
     return repo;
   }
 
   await simpleGit().clone("https://github.com/kolmafia/kolmafia", "kolmafia", {
-    "--branch": BRANCH,
+    "--branch": branch,
     "--single-branch": null,
     "--depth": 1,
   });
@@ -115,8 +113,8 @@ function coalesceComments(
 
 // Processers
 
-export async function processResults(results: Results) {
-  const repo = await prepRepo();
+export async function processResults(results: Results, branch: string) {
+  const repo = await prepRepo(branch);
 
   await processEquipment(results.equipment);
   await processItems(results.items);
@@ -355,7 +353,7 @@ async function processMonsters(monsters: Results["monsters"]) {
 }
 
 async function processShop(shop: Results["shop"]) {
-  const path = `kolmafia/src/data/npcstores.txt`;
+  const path = `kolmafia/src/data/coinmasters.txt`;
 
   const file = await readFile(path, "utf-8");
   const lines = file.trim().split("\n");

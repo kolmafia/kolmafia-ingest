@@ -10,6 +10,7 @@
   },
   "type": "module",
   "dependencies": {
+    "cmd-ts": "^0.13.0",
     "simple-git": "^3.21.0"
   }
 }
