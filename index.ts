@@ -33,7 +33,6 @@ async function main(file: string, branch: string) {
   await processResults(results, branch);
 }
 
-
 const app = command({
   name: 'kolmafia-ingress',
   args: {
