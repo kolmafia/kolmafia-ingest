@@ -174,7 +174,7 @@ async function processItems(items: Results["items"]) {
     lines.splice(i++, placeholder ? 1 : 0, items.shift()!);
   }
 
-  await writeFile(file, lines.join("\n"));
+  await writeFile(file, lines.join("\n") + "\n");
 }
 
 async function processSkills(skills: Results["skills"]) {
@@ -232,7 +232,7 @@ async function processSkills(skills: Results["skills"]) {
     lines.splice(i++, placeholder ? 1 : 0, skills.shift()!);
   }
 
-  await writeFile(path, lines.join("\n"));
+  await writeFile(path, lines.join("\n") + "\n");
 }
 
 async function processEquipment(equipment: Results["equipment"]) {
