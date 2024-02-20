@@ -6,7 +6,7 @@ import { discover, discoverFamiliar, discoverMonster } from "./discover";
 import { newResults, processResults } from "./results";
 
 async function main(file: string, branch: string) {
-  const session = await fs.readFile(file, "utf-8");
+  const session = (await fs.readFile(file, "utf-8")).replaceAll("\r\n", "\n");
 
   const results = newResults();
 
