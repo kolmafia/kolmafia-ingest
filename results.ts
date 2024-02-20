@@ -133,6 +133,10 @@ export async function processResults(results: Results, branch: string) {
 }
 
 async function processItems(items: Results["items"]) {
+  if (items.length === 0) {
+    return;
+  }
+
   const file = "kolmafia/src/data/items.txt";
   items.sort();
 
@@ -170,10 +174,14 @@ async function processItems(items: Results["items"]) {
     lines.splice(i++, placeholder ? 1 : 0, items.shift()!);
   }
 
-  await writeFile(file, lines.join("\n"));
+  await writeFile(file, lines.join("\n") + "\n");
 }
 
 async function processSkills(skills: Results["skills"]) {
+  if (skills.length === 0) {
+    return;
+  }
+
   const path = "kolmafia/src/data/classskills.txt";
   skills.sort();
 
@@ -224,10 +232,14 @@ async function processSkills(skills: Results["skills"]) {
     lines.splice(i++, placeholder ? 1 : 0, skills.shift()!);
   }
 
-  await writeFile(path, lines.join("\n"));
+  await writeFile(path, lines.join("\n") + "\n");
 }
 
 async function processEquipment(equipment: Results["equipment"]) {
+  if (equipment.length === 0) {
+    return;
+  }
+
   const path = "kolmafia/src/data/equipment.txt";
 
   const grouped = equipment.reduce(
@@ -277,6 +289,10 @@ async function processSimpleAlphabetical(
   values: string[],
   fillGaps = false,
 ) {
+  if (values.length === 0) {
+    return;
+  }
+
   const path = `kolmafia/src/data/${filename}`;
 
   const file = await readFile(path, "utf-8");
@@ -341,6 +357,10 @@ async function processSimpleAlphabetical(
 }
 
 async function processMonsters(monsters: Results["monsters"]) {
+  if (monsters.length === 0) {
+    return;
+  }
+
   const path = `kolmafia/src/data/monsters.txt`;
 
   const file = await readFile(path, "utf-8");
@@ -353,6 +373,10 @@ async function processMonsters(monsters: Results["monsters"]) {
 }
 
 async function processShop(shop: Results["shop"]) {
+  if (shop.length === 0) {
+    return;
+  }
+
   const path = `kolmafia/src/data/coinmasters.txt`;
 
   const file = await readFile(path, "utf-8");
@@ -423,6 +447,10 @@ function modifierSort(a: string, b: string) {
 }
 
 async function processModifiers(modifiers: Results["modifiers"]) {
+  if (modifiers.length === 0) {
+    return;
+  }
+
   const path = "kolmafia/src/data/modifiers.txt";
 
   const grouped = modifiers
