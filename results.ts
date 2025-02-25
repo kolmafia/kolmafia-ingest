@@ -476,7 +476,7 @@ async function processModifiers(modifiers: Results["modifiers"]) {
     sectionStart += 2;
 
     let sectionEnd = lines.findIndex(
-      (l, i) => i > sectionStart && l.match(/# .*? section/),
+      (l, i) => i > sectionStart && (l.match(/# .*? section/) || l === "# Virtual Equipment"),
     );
 
     sectionEnd = sectionEnd > 0 ? sectionEnd - 1 : lines.length;
