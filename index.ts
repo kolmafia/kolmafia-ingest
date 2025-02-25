@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import { command, option, positional, run } from "cmd-ts";
-import { File } from 'cmd-ts/batteries/fs';
+import { File } from "cmd-ts/batteries/fs";
 
 import { discover, discoverFamiliar, discoverMonster } from "./discover";
 import { newResults, processResults } from "./results";
@@ -12,7 +12,7 @@ async function main(file: string, branch: string) {
   if (file.endsWith(".json")) {
     results = {
       ...results,
-      ...JSON.parse(contents)
+      ...JSON.parse(contents),
     };
   } else {
     const session = contents.replaceAll("\r\n", "\n");
@@ -42,7 +42,7 @@ async function main(file: string, branch: string) {
 }
 
 const app = command({
-  name: 'kolmafia-ingress',
+  name: "kolmafia-ingress",
   args: {
     file: positional({
       type: File,

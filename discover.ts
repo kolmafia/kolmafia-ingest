@@ -80,7 +80,10 @@ function discoverEffect(results: Results, discovery: string[]) {
 
   if (discovery.length === 1) return;
 
-  results.modifiers.push({ section: "status effect", line: discovery.slice(1) });
+  results.modifiers.push({
+    section: "status effect",
+    line: discovery.slice(1),
+  });
 }
 
 function discoverOutfit(results: Results, discovery: string[]) {
