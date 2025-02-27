@@ -147,7 +147,8 @@ async function processItems(items: Results["items"]) {
   let id = 0;
   while (true) {
     if (items.length === 0) break;
-    if (lines.includes(items[0])) {
+    // data line might end with plural
+    if (lines.some(l => l.startsWith(items[0]))) {
       items.shift();
       continue;
     }
