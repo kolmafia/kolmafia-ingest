@@ -8,6 +8,7 @@ export type Results = {
   modifiers: { section: string; line: string[] }[];
   fullness: string[];
   inebriety: string[];
+  spleen: string[];
   effects: string[];
   outfits: string[];
   monsters: string[];
@@ -22,6 +23,7 @@ export const newResults = () => ({
   modifiers: [],
   fullness: [],
   inebriety: [],
+  spleen: [],
   effects: [],
   outfits: [],
   monsters: [],
@@ -64,6 +66,8 @@ function normaliseSection(section: string) {
       return section;
     case "drink":
       return "booze";
+    case "spleen":
+      return "spleen toxins";
     case "skill":
       return "passive skills";
     case "misc":
@@ -116,16 +120,29 @@ function coalesceComments(
 export async function processResults(results: Results, branch: string) {
   const repo = await prepRepo(branch);
 
+  console.log("Equipment");
   await processEquipment(results.equipment);
+  console.log("Items");
   await processItems(results.items);
+  console.log("Mods");
   await processModifiers(results.modifiers);
+  console.log("Monsters");
   await processMonsters(results.monsters);
+  console.log("Shop");
   await processShop(results.shop);
+  console.log("Familiars");
   await processSimpleAlphabetical("familiars.txt", results.familiars, true);
+  console.log("Food");
   await processSimpleAlphabetical("fullness.txt", results.fullness);
+  console.log("Booze");
   await processSimpleAlphabetical("inebriety.txt", results.inebriety);
+  console.log("Spleen");
+  await processSimpleAlphabetical("spleenhit.txt", results.spleen);
+  console.log("Outfits");
   await processSimpleAlphabetical("outfits.txt", results.outfits, true);
+  console.log("Status Effects");
   await processSimpleAlphabetical("statuseffects.txt", results.effects, true);
+  console.log("Skills");
   await processSkills(results.skills);
 
   const diff = await repo.diff();
@@ -138,7 +155,7 @@ async function processItems(items: Results["items"]) {
   }
 
   const file = "kolmafia/src/data/items.txt";
-  items.sort();
+  items.sort((a, b) => Number(a.split("\t")[0]) - Number(b.split("\t")[0]));
 
   const itemFile = await readFile(file, "utf-8");
   const lines = itemFile.trim().split("\n");
@@ -147,7 +164,8 @@ async function processItems(items: Results["items"]) {
   let id = 0;
   while (true) {
     if (items.length === 0) break;
-    if (lines.includes(items[0])) {
+    // data line might end with plural
+    if (lines.some(l => l.startsWith(items[0]))) {
       items.shift();
       continue;
     }
