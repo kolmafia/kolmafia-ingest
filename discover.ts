@@ -21,7 +21,7 @@ const EQUIPMENTS = [
   "pants",
   "hat",
 ];
-const SECTIONS = [...EQUIPMENTS, "food", "drink", "potion"];
+const SECTIONS = [...EQUIPMENTS, "food", "drink", "spleen", "potion"];
 
 function getSection(types: string[]) {
   return types.find((t) => SECTIONS.includes(t)) ?? "misc";
@@ -57,6 +57,12 @@ function discoverItem(results: Results, discovery: string[]) {
 
   if (section === "drink") {
     results.inebriety.push(discovery[1]);
+    results.modifiers.push({ section, line: discovery.slice(2) });
+    return;
+  }
+
+  if (section === "spleen") {
+    results.spleenhit.push(discovery[1]);
     results.modifiers.push({ section, line: discovery.slice(2) });
     return;
   }

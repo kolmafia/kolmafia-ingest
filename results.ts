@@ -8,6 +8,7 @@ export type Results = {
   modifiers: { section: string; line: string[] }[];
   fullness: string[];
   inebriety: string[];
+  spleenhit: string[];
   effects: string[];
   outfits: string[];
   monsters: string[];
@@ -22,6 +23,7 @@ export const newResults = () => ({
   modifiers: [],
   fullness: [],
   inebriety: [],
+  spleenhit: [],
   effects: [],
   outfits: [],
   monsters: [],
@@ -62,6 +64,8 @@ function normaliseSection(section: string) {
     case "food":
     case "pants":
       return section;
+    case "spleen":
+      return "spleen toxins";
     case "drink":
       return "booze";
     case "skill":
@@ -124,6 +128,7 @@ export async function processResults(results: Results, branch: string) {
   await processSimpleAlphabetical("familiars.txt", results.familiars, true);
   await processSimpleAlphabetical("fullness.txt", results.fullness);
   await processSimpleAlphabetical("inebriety.txt", results.inebriety);
+  await processSimpleAlphabetical("spleenhit.txt", results.spleenhit);
   await processSimpleAlphabetical("outfits.txt", results.outfits, true);
   await processSimpleAlphabetical("statuseffects.txt", results.effects, true);
   await processSkills(results.skills);
